@@ -18,8 +18,9 @@ installation approach:
     make install
 
 and then using simply "pgOtter" program, you can also simply keep the
-fetched pgOtter directory someplace, and use without full "installation"
-- simply run:
+fetched pgOtter directory someplace, and use without full "installation".
+
+In such case, run:
 
     .../pgOtter/bin/pgOtter
 
