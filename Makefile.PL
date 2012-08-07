@@ -6,7 +6,7 @@ use ExtUtils::MakeMaker;
 
 WriteMakefile(
     NAME          => 'pgOtter',
-    AUTHOR        => q{Hubert depesz Lubaczewski <depesz@omniti.com>},
+    AUTHOR        => q{Hubert depesz Lubaczewski <depesz@depesz.com>},
     VERSION_FROM  => 'lib/pgOtter.pm',
     ABSTRACT_FROM => 'lib/pgOtter.pm',
     ( $ExtUtils::MakeMaker::VERSION >= 6.3002
