@@ -22,7 +22,7 @@ fetched pgOtter directory someplace, and use without full "installation".
 
 In such case, run:
 
-    .../pgOtter/bin/pgOtter
+    .../pgOtter/pgOtter
 
 Of course you will need some options - you will get list of options by
 running
