@@ -83,7 +83,7 @@ sub read_args {
         );
 
     if ( $help ) {
-        $self->{'help'} = $help;
+        $self->{ 'help' } = $help;
         $self->show_help_and_die();
     }
     if ( $version ) {
