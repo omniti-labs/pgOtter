@@ -12,7 +12,8 @@ WriteMakefile(
     ( $ExtUtils::MakeMaker::VERSION >= 6.3002
         ? ( 'LICENSE' => 'bsd' )
         : () ),
-    PL_FILES  => {},
+    PL_FILES  => { },
+    EXE_FILES => [ 'pgOtter', ],
     PREREQ_PM => {
         'Test::More' => 0,
     },

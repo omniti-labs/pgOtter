@@ -1,135 +1,166 @@
 package pgOtter;
 
-use 5.006;
+use 5.010;
 use strict;
 use warnings;
+use warnings qw( FATAL utf8 );
+use utf8;
+use open qw( :std :utf8 );
+use Carp;
+use English qw( -no_match_vars );
 
-=head1 NAME
-
-pgOtter - The great new pgOtter!
-
-=head1 VERSION
-
-Version 0.01
-
-=cut
+use Getopt::Long qw( :config no_ignore_case );
+use Data::Dumper;
+use Pod::Usage;
+use FindBin;
+use File::Basename;
+use File::Spec;
 
 our $VERSION = '0.01';
 
-=head1 SYNOPSIS
+=head1 pgOtter class
 
-Quick summary of what the module does.
+This documentation is meant to be for developers - if you're looking for
+end-user docs, pgOtter --long-help is better option.
 
-Perhaps a little code snippet.
-
-    use pgOtter;
-
-    my $foo = pgOtter->new();
-    ...
-
-=head1 EXPORT
-
-A list of functions that can be exported.  You can delete this section
-if you don't export anything, such as for a purely object-oriented module.
-
-=head1 SUBROUTINES/METHODS
-
-=head2 function1
+=head2 METHODS
 
 =cut
 
-sub function1 {
+=head3 new()
+
+Object constructor, no logic in here
+
+=cut
+
+sub new {
+    my $class = shift;
+    return bless {}, $class;
 }
 
-=head2 function2
+=head3 run()
+
+Wraps all the work that pgOtter does, starting with reading command line
+arguments, config file, parsing log files and generating output.
 
 =cut
 
-sub function2 {
+sub run {
+    my $self = shift;
+    $self->read_args();
+    print "All looks good.\n";
+    exit;
 }
 
-=head1 AUTHOR
+=head3 read_args()
 
-Hubert depesz Lubaczewski, C<< <depesz at omniti.com> >>
+Handles reading of command line options, including loading of configuration
+from config file.
 
-=head1 BUGS
-
-Please report any bugs or feature requests to C<bug-pgotter at rt.cpan.org>, or through
-the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=pgOtter>.  I will be notified, and then you'll
-automatically be notified of progress on your bug as I make changes.
-
-
-
-
-=head1 SUPPORT
-
-You can find documentation for this module with the perldoc command.
-
-    perldoc pgOtter
-
-
-You can also look for information at:
-
-=over 4
-
-=item * RT: CPAN's request tracker (report bugs here)
-
-L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=pgOtter>
-
-=item * AnnoCPAN: Annotated CPAN documentation
-
-L<http://annocpan.org/dist/pgOtter>
-
-=item * CPAN Ratings
-
-L<http://cpanratings.perl.org/d/pgOtter>
-
-=item * Search CPAN
-
-L<http://search.cpan.org/dist/pgOtter/>
-
-=back
-
-
-=head1 ACKNOWLEDGEMENTS
-
-
-=head1 LICENSE AND COPYRIGHT
-
-Copyright 2012 Hubert depesz Lubaczewski.
-
-This program is distributed under the (Revised) BSD License:
-L<http://www.opensource.org/licenses/bsd-license.php>
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions
-are met:
-
-* Redistributions of source code must retain the above copyright
-notice, this list of conditions and the following disclaimer.
-
-* Redistributions in binary form must reproduce the above copyright
-notice, this list of conditions and the following disclaimer in the
-documentation and/or other materials provided with the distribution.
-
-* Neither the name of Hubert depesz Lubaczewski's Organization
-nor the names of its contributors may be used to endorse or promote
-products derived from this software without specific prior written
-permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
+Merged settings (from config and command line) are stored in $self.
 
 =cut
+
+sub read_args {
+    my $self = shift;
+    my $help = 0;
+    my $output;
+    my $log_type;
+    my $prefix;
+    my $jobs;
+    my $version;
+
+    $self->show_help_and_die()
+        unless GetOptions(
+        'help|h|?'     => sub { $help = 1; },
+        'long-help|hh' => sub { $help = 2; },
+        'config|c=s'   => sub { $self->load_config_file( $_[ 1 ] ) },
+        'output-dir|o=s'      => \$output,
+        'log-type|l=s'        => \$log_type,
+        'log-line-prefix|p=s' => \$prefix,
+        'jobs|j=i'            => \$jobs,
+        'version|V'           => \$version,
+        );
+
+    if ( $help ) {
+        $self->{'help'} = $help;
+        $self->show_help_and_die();
+    }
+    if ( $version ) {
+        printf '%s version %s%s', basename( $PROGRAM_NAME ), $VERSION, "\n";
+        exit;
+    }
+
+    printf "%-10s : %s.\n", "output",   $output   // "<UNDEF>";
+    printf "%-10s : %s.\n", "log_type", $log_type // "<UNDEF>";
+    printf "%-10s : %s.\n", "prefix",   $prefix   // "<UNDEF>";
+    printf "%-10s : %s.\n", "jobs",     $jobs     // "<UNDEF>";
+}
+
+=head3 load_config_file()
+
+Loads options from config file, and prepends them to @ARGV for further
+processign by Getopt::Long.
+
+=cut
+
+sub load_config_file {
+    my $self     = shift;
+    my $filename = shift;
+    my @new_args = ();
+    open my $fh, '<', $filename or croak( "Cannot open $filename: $OS_ERROR\n" );
+    while ( <$fh> ) {
+        s/\s*\z//;
+        next if '' eq $_;
+        next if /\A\s*#/;
+        if ( /\A\s*(-[^\s=]*)\z/ ) {
+
+            # -v
+            push @new_args, $1;
+        }
+        elsif ( /\A\s*(-[^\s=]*=[^'"\s]+)\z/ ) {
+
+            # -x=123
+            push @new_args, $1;
+        }
+        elsif ( /\A\s*(-[^\s=]*)\s+([^'"\s]+)\z/ ) {
+
+            # -x 123
+            push @new_args, $1, $2;
+        }
+        elsif ( /\A\s*(-[^\s=]*)(?:=|\s+)(['"])(.*)\2\z/ ) {
+
+            # -x="123" or -x "123"
+            push @new_args, $1, $3;
+        }
+    }
+    close $fh;
+    unshift @ARGV, @new_args;
+    return;
+}
+
+=head3 show_help_and_die()
+
+As name suggests, it prints help message and exits pgOtter with non-zero
+status.
+
+=cut
+
+sub show_help_and_die {
+    my $self = shift;
+    my ( $format, @args ) = @_;
+    if ( defined $format ) {
+        $format =~ s/\s*\z/\n/;
+        printf STDERR $format, @args;
+    }
+    my $help_level = $self->{ 'help' } // 1;
+    pod2usage(
+        {
+            -verbose => $help_level,
+            -input   => File::Spec->catfile( $FindBin::Bin, 'doc', 'pgOtter.pod' ),
+            -exitval => 2,
+        }
+    );
+}
 
 1;    # End of pgOtter

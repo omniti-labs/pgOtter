@@ -1,0 +1,102 @@
+=head1 NAME
+
+pgOtter
+
+=head1 SYNOPSIS
+
+    pgOtter [options] file-1 file-2 ... file-n
+
+=head1 OPTIONS
+
+=over
+
+=item --config -c
+
+Name of file containing configuration for log parsing.
+
+=item --output-dir (-o)
+
+Directory where to put output files. If the directory does not exist - pgOtter
+will try to create it. Directory name can contain strftime-like format strings.
+
+=item --log-type (-l)
+
+One of: csvlog, stderr, syslog - depending on your settings in PostgreSQL.conf
+
+=item --log-line-prefix (-p)
+
+Value of I<log_line_prefix> option in PostgreSQL that did create those logs
+
+=item --jobs (-j)
+
+Number of parallel jobs that I<pgOtter> can spawn to process logs.
+
+=item --version (-V)
+
+Shows version of pgOtter that you have installed, and exits.
+
+=item --help (-h)
+
+Prints usage information.
+
+=item --long-help (-hh)
+
+Prints usage information with additional information.
+
+=back
+
+More options are listed in REPORT OPTIONS part below, accessible via --long-help
+command line argument.
+
+=head1 REPORT OPTIONS
+
+Just a placeholder for now.
+
+=head1 DESCRIPTION
+
+pgOtter is a tool for analyzing PostgreSQL query logs. It is meant to be the
+most configurable and reasonably fast.
+
+=head1 CONFIG FILE
+
+Since configuration of what you want in the analysis, and how can be complex,
+it's generally more advisable to use config file, instead of command line
+arguments.
+
+Config file contains normal command line arguments, one per line, with optional
+empty lines and comments (lines starting with # character).
+
+Order of parsing options is exactly as specified - that is options passed to
+pgOtter before "--config=some_file" will get overwritten by options from config
+file, and thee in turn will get overwritten by any options that are after
+"--config=some_file".
+
+=head1 OUTPUT
+
+Generated output consists of many files, with main report file being
+"index.html".
+
+It is generally not good idea to output reports from different runs of pgOtter
+in the same place, so --output-dir option supports strftime-like format strings,
+so you can:
+
+    pgOtter -c some_config_file -o "/var/www/pgOtter/%Y-%m-%d"
+
+=head1 ENVIRONMENT
+
+pgOtter uses environemnt variables to configure some aspects of its execution.
+Namely:
+
+=over
+
+=item * TMPDIR - location of directory where pgOtter creates its temporary files
+
+=item * PATH - should be set so that pgOtter can find decompressors needed to
+access logs (gzip, bzip2)
+
+=back
+
+=head1 COPYRIGHT
+
+The pgOtter project is Copyright (c) 2012 OmniTI. All rights reserved.
+
