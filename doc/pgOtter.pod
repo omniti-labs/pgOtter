@@ -10,26 +10,27 @@ pgOtter
 
 =over
 
-=item --config -c
+=item --config (-c)
 
 Name of file containing configuration for log parsing.
 
-=item --output-dir (-o)
+=item --output-dir (-o) (default: .)
 
 Directory where to put output files. If the directory does not exist - pgOtter
 will try to create it. Directory name can contain strftime-like format strings.
 
-=item --log-type (-l)
+=item --log-type (-l) (default: stderr)
 
 One of: csvlog, stderr, syslog - depending on your settings in PostgreSQL.conf
 
-=item --log-line-prefix (-p)
+=item --log-line-prefix (-p) (default: '%t [%p]: [%l-1] ')
 
 Value of I<log_line_prefix> option in PostgreSQL that did create those logs
 
-=item --jobs (-j)
+=item --jobs (-j) (default: 1)
 
-Number of parallel jobs that I<pgOtter> can spawn to process logs.
+Number of parallel jobs that I<pgOtter> can spawn to process logs. Upper limit
+is 1000.
 
 =item --version (-V)
 

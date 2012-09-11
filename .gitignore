@@ -12,3 +12,4 @@ pod2htm*.tmp
 pgOtter-*
 MANIFEST.bak
 MYMETA.*
+*.config
