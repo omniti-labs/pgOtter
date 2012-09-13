@@ -19,6 +19,7 @@ use Pod::Usage;
 use POSIX qw( strftime :sys_wait_h );
 use File::Temp qw( tempdir );
 use Time::HiRes;
+use pgOtter::Log_Line_Prefix;
 
 our $VERSION = '0.01';
 
@@ -64,8 +65,8 @@ Handles initial parsing of single log file.
 =cut
 
 sub parse_log_file {
-    my $self = shift;
-    my $filename = shift;
+    my $self      = shift;
+    my $filename  = shift;
     my $wait_time = rand() * 4 + 2;
     print "$$ : $filename : $wait_time\n";
     Time::HiRes::sleep( $wait_time );
@@ -98,13 +99,15 @@ sub run_in_parallel {
     my $previous_chld = $SIG{ 'CHLD' };
 
     $SIG{ 'CHLD' } = sub {
+
         # Function taken from perldoc perlipc
         my $child;
         while ( ( $child = waitpid( -1, WNOHANG ) ) > 0 ) {
-            push @{ $D }, {
-                'pid' => $child,
+            push @{ $D },
+                {
+                'pid'    => $child,
                 'status' => $CHILD_ERROR,
-            };
+                };
         }
     };
 
@@ -113,36 +116,38 @@ sub run_in_parallel {
     srand();
 
     while ( 1 ) {
-        printf "$$ %s : Entering loop\n", ~~localtime(time());
+        printf "$$ %s : Entering loop\n", ~~ localtime( time() );
         my $work_count = scalar keys %{ $K };
         my $done_count = scalar @{ $D };
         last if ( 0 == $work_count ) and ( 0 == $done_count ) and ( $arg_no == scalar @{ $args } );
-        if ( $self->{'jobs_limit'} > $work_count ) {
+        if ( $self->{ 'jobs_limit' } > $work_count ) {
             my $child_pid = fork();
-            if ($child_pid) {
+            if ( $child_pid ) {
+
                 # master
-                $K->{$child_pid} = 1;
-                printf "$$ %s : worker ($child_pid) started for %s\n", ~~localtime(time()), $args->[$arg_no];
+                $K->{ $child_pid } = 1;
+                printf "$$ %s : worker ($child_pid) started for %s\n", ~~ localtime( time() ), $args->[ $arg_no ];
                 $arg_no++;
                 next;
             }
+
             # worker
             $worker->( $args->[ $arg_no ] );
-            exit(0);
+            exit( 0 );
         }
         if ( 0 < $done_count ) {
             while ( my $kid = shift @{ $D } ) {
-                printf "$$ %s : worker ($kid) ended\n", ~~localtime(time());
-                delete $K->{ $kid->{'pid'} };
+                printf "$$ %s : worker ($kid) ended\n", ~~ localtime( time() );
+                delete $K->{ $kid->{ 'pid' } };
             }
             next;
         }
-        printf "$$ %s : Before sleep\n", ~~localtime(time());
+        printf "$$ %s : Before sleep\n", ~~ localtime( time() );
         sleep 10;    # this will be cancelled by signal, so the sleep time doesn't matter much.
-        printf "$$ %s : After sleep\n", ~~localtime(time());
+        printf "$$ %s : After sleep\n", ~~ localtime( time() );
     }
 
-    printf "%s : All done.\n", ~~localtime(time());
+    printf "%s : All done.\n", ~~ localtime( time() );
 
     $SIG{ 'CHLD' } = $previous_chld;
     return;
@@ -189,7 +194,9 @@ sub read_args {
 
     $self->show_help_and_die( 'Unknown log-type: %s', $log_type ) unless $log_type =~ m{\A(?:syslog|stderr|csvlog)\z};
 
-    $self->compile_log_line_prefix_re( $prefix ) if 'csvlog' ne $log_type;
+    if ( 'csvlog' ne $log_type ) {
+        $self->{ 'log_line_prefix_re' } = pgOtter::Log_Line_Prefix::compile_re( $prefix );
+    }
 
     # Upper limit of number of workers.
     $jobs = 1000 if 1000 < $jobs;
@@ -212,66 +219,6 @@ sub read_args {
     }
 
     $self->{ 'log_files' } = \@ARGV;
-    return;
-}
-
-=head3 compile_log_line_prefix_re()
-
-Converts given log_line_prefix value into regexp that will match this
-regexp, splitting all elements into separate parts in %LAST_PAREN_MATCH
-(a.k.a. %+)
-
-If %m or %t are provided, the regexp also splits them into 6 separate
-elements in %+, with keys:
-
-=over
-
-=item * TimeY - year
-=item * TimeMo - month
-=item * TimeD - day
-=item * TimeH - hour
-=item * TimeMi - minutes
-=item * TimeS - seconds
-
-=back
-
-In case of %m, TimeS contains fractions.
-
-=cut
-
-sub compile_log_line_prefix_re {
-    my $self   = shift;
-    my $prefix = shift;
-
-    my %re = (
-        'a' => '\S+',
-        'c' => '[a-f0-9]+\.[a-f0-9]+',
-        'd' => '[a-z0-9_]*',
-        'e' => '[a-f0-9]{5}',
-        'h' => '\d{1,3}(?:\.\d{1,3}){3}|\[local\]|',
-        'i' => 'BEGIN|COMMIT|DELETE|INSERT|ROLLBACK|SELECT|SET|SHOW|UPDATE',
-        'l' => '\d+',
-        'm' => '(?<TimeY>\d\d\d\d)-(?<TimeMo>\d\d)-(?<TimeD>\d\d) (?<TimeH>\d\d):(?<TimeMi>\d\d):(?<TimeS>\d\d\.\d+) (?:[A-Z]+|\+\d\d\d\d)',
-        'p' => '\d+',
-        'r' => '\d{1,3}(?:\.\d{1,3}){3}\(\d+\)|\[local\]|',
-        's' => '\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d (?:[A-Z]+|\+\d\d\d\d)',
-        't' => '(?<TimeY>\d\d\d\d)-(?<TimeMo>\d\d)-(?<TimeD>\d\d) (?<TimeH>\d\d):(?<TimeMi>\d\d):(?<TimeS>\d\d) (?:[A-Z]+|\+\d\d\d\d)',
-        'u' => '[a-z0-9_]*',
-        'v' => '\d+/\d+|',
-        'x' => '\d+',
-    );
-
-    my @known_keys = keys %re;
-    my $known_re = join '|', @known_keys;
-
-    my @matched = ();
-
-    # Escape characters that have special meaning in regular expressions
-    $prefix =~ s/([()\[\]])/\\$1/g;
-
-    $prefix =~ s/%($known_re)/(?<$1>$re{$1})/g;
-    $self->{ 'log_line_prefix_re' } = qr{\A$prefix}o;
-
     return;
 }
 

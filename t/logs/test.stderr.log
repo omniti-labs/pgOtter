@@ -1,0 +1,5 @@
+a[psql] u[depesz] d[depesz] r[[local]] h[[local]] p[15444] t[2012-09-13 21:49:37 CEST] m[2012-09-13 21:49:37.840 CEST] i[SELECT] e[00000] c[505238d0.3c54] l[3] s[2012-09-13 21:49:36 CEST] v[2/2] x[0] LOG:  [logged line]
+a[psql] u[depesz] d[depesz] r[[local]] h[[local]] p[15444] t[2012-09-13 21:49:37 CEST] m[2012-09-13 21:49:37.840 CEST] i[SELECT] e[00000] c[505238d0.3c54] l[4] s[2012-09-13 21:49:36 CEST] v[2/2] x[0] CONTEXT:  SQL statement "SELECT b()"
+	PL/pgSQL function a() line 1 at PERFORM
+a[psql] u[depesz] d[depesz] r[[local]] h[[local]] p[15444] t[2012-09-13 21:49:37 CEST] m[2012-09-13 21:49:37.840 CEST] i[SELECT] e[00000] c[505238d0.3c54] l[5] s[2012-09-13 21:49:36 CEST] v[2/2] x[0] STATEMENT:  select a();
+a[psql] u[depesz] d[depesz] r[[local]] h[[local]] p[15444] t[2012-09-13 21:49:37 CEST] m[2012-09-13 21:49:37.841 CEST] i[SELECT] e[00000] c[505238d0.3c54] l[6] s[2012-09-13 21:49:36 CEST] v[2/0] x[0] LOG:  duration: 1.662 ms  statement: select a();

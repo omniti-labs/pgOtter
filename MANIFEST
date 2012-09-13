@@ -1,6 +1,10 @@
 Changes
 doc/pgOtter.pod
+etsy.config
 lib/pgOtter.pm
+lib/pgOtter/Log_Line_Prefix.pm
+lib/pgOtter/Parser.pm
+lib/pgOtter/Parser/Csvlog.pm
 LICENSE
 Makefile.PL
 MANIFEST			This list of files
@@ -12,5 +16,9 @@ t/02-pod.t
 t/03-pod-coverage.t
 t/04-perl-critic.t
 t/05-perltidy.t
+t/06-parse-csvlog.t
+t/logs/test.csvlog.log
+t/logs/test.stderr.log
+t/logs/test.syslog.log
 t/perlcriticrc
 t/perltidyrc

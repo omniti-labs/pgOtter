@@ -50,3 +50,4 @@
 \bPg-Explain-[\d\.\_]+
 ^MYMETA.yml$
 ^MYMETA\.json$
+TEST-DATA/

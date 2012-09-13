@@ -1,0 +1,3 @@
+2012-09-13 21:51:12.642 CEST,"depesz","depesz",15673,"[local]",5052392f.3d39,3,"SELECT",2012-09-13 21:51:11 CEST,2/2,0,LOG,00000,"[logged line]",,,,,"SQL statement ""SELECT b()""
+PL/pgSQL function a() line 1 at PERFORM","select a();",,,"psql"
+2012-09-13 21:51:12.642 CEST,"depesz","depesz",15673,"[local]",5052392f.3d39,4,"SELECT",2012-09-13 21:51:11 CEST,2/0,0,LOG,00000,"duration: 1.561 ms  statement: select a();",,,,,,,,,"psql"
