@@ -25,22 +25,6 @@ Converts given log_line_prefix value into regexp that will match this
 regexp, splitting all elements into separate parts in %LAST_PAREN_MATCH
 (a.k.a. %+)
 
-If %m or %t are provided, the regexp also splits them into 6 separate
-elements in %+, with keys:
-
-=over
-
-=item * TimeY - year
-=item * TimeMo - month
-=item * TimeD - day
-=item * TimeH - hour
-=item * TimeMi - minutes
-=item * TimeS - seconds
-
-=back
-
-In case of %m, TimeS contains fractions.
-
 =cut
 
 sub compile_re {
@@ -54,11 +38,11 @@ sub compile_re {
         'h' => '\d{1,3}(?:\.\d{1,3}){3}|\[local\]|',
         'i' => 'BEGIN|COMMIT|DELETE|INSERT|ROLLBACK|SELECT|SET|SHOW|UPDATE',
         'l' => '\d+',
-        'm' => '(?<TimeY>\d\d\d\d)-(?<TimeMo>\d\d)-(?<TimeD>\d\d) (?<TimeH>\d\d):(?<TimeMi>\d\d):(?<TimeS>\d\d\.\d+) (?:[A-Z]+|\+\d\d\d\d)',
+        'm' => '\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d\.\d+ (?:[A-Z]+|\+\d\d\d\d)',
         'p' => '\d+',
         'r' => '\d{1,3}(?:\.\d{1,3}){3}\(\d+\)|\[local\]|',
         's' => '\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d (?:[A-Z]+|\+\d\d\d\d)',
-        't' => '(?<TimeY>\d\d\d\d)-(?<TimeMo>\d\d)-(?<TimeD>\d\d) (?<TimeH>\d\d):(?<TimeMi>\d\d):(?<TimeS>\d\d) (?:[A-Z]+|\+\d\d\d\d)',
+        't' => '\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d (?:[A-Z]+|\+\d\d\d\d)',
         'u' => '[a-z0-9_]*',
         'v' => '\d+/\d+|',
         'x' => '\d+',
