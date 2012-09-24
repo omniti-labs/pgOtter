@@ -33,7 +33,7 @@ sub compile_re {
     my %re = (
         'a' => '\S+',
         'c' => '[a-f0-9]+\.[a-f0-9]+',
-        'd' => '[a-z0-9_]*',
+        'd' => '[a-z0-9_]*|\[unknown\]',
         'e' => '[a-f0-9]{5}',
         'h' => '\d{1,3}(?:\.\d{1,3}){3}|\[local\]|',
         'i' => 'BEGIN|COMMIT|DELETE|INSERT|ROLLBACK|SELECT|SET|SHOW|UPDATE',
@@ -43,7 +43,7 @@ sub compile_re {
         'r' => '\d{1,3}(?:\.\d{1,3}){3}\(\d+\)|\[local\]|',
         's' => '\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d (?:[A-Z]+|\+\d\d\d\d)',
         't' => '\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d (?:[A-Z]+|\+\d\d\d\d)',
-        'u' => '[a-z0-9_]*',
+        'u' => '[a-z0-9_]*|\[unknown\]',
         'v' => '\d+/\d+|',
         'x' => '\d+',
     );
