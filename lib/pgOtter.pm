@@ -20,6 +20,7 @@ use POSIX qw( strftime :sys_wait_h );
 use File::Temp qw( tempdir );
 use Time::HiRes;
 use pgOtter::Log_Line_Prefix;
+use IO::Uncompress::AnyUncompress qw( $AnyUncompressError );
 
 our $VERSION = '0.01';
 
@@ -53,9 +54,32 @@ arguments, config file, parsing log files and generating output.
 sub run {
     my $self = shift;
     $self->read_args();
+    $self->load_parser();
     $self->run_in_parallel( sub { $self->parse_log_file( shift ) }, $self->{ 'log_files' } );
     print Dumper( $self );
     exit;
+}
+
+=head3 load_parser()
+
+Loads parser class based on chosen log_type
+
+=cut
+
+sub load_parser {
+    my $self     = shift;
+    my $class    = sprintf 'pgOtter::Parser::%s', ucfirst( lc( $self->{ 'log_type' } ) );
+    my $filename = $class . '.pm';
+    $filename =~ s{::}{/}g;
+
+    require $filename;
+    $self->{ 'parser' } = $class->new();
+
+    if ( 'csvlog' ne $self->{ 'log_type' } ) {
+        my $prefix_re = pgOtter::Log_Line_Prefix::compile_re( $self->{ 'log_line_prefix' } );
+        $self->{ 'parser' }->prefix_re( $prefix_re );
+    }
+    return;
 }
 
 =head3 parse_log_file
@@ -65,12 +89,22 @@ Handles initial parsing of single log file.
 =cut
 
 sub parse_log_file {
-    my $self      = shift;
-    my $filename  = shift;
-    my $wait_time = rand() * 4 + 2;
-    print "$$ : $filename : $wait_time\n";
-    Time::HiRes::sleep( $wait_time );
-    print "$$ : $filename : done.\n";
+    my $self     = shift;
+    my $filename = shift;
+    my $start    = Time::HiRes::time();
+    my $fh       = IO::Uncompress::AnyUncompress->new( $filename ) or croak( "anyuncompress failed: $AnyUncompressError\n" );
+    $self->{ 'parser' }->fh( $fh );
+    my %counts = ();
+    while ( my $l = $self->{ 'parser' }->next_line() ) {
+        $counts{ $l->{ 'error_severity' } }++;
+        $counts{ 'ALL' }++;
+        $PROGRAM_NAME = 'Parsing ' . $filename . " position: " . tell($fh);
+    }
+    close $fh;
+    my @sorted_keys = sort keys %counts;
+    my $count_str   = join( ' , ', map { "$_:" . $counts{ $_ } } @sorted_keys );
+    my $end         = Time::HiRes::time();
+    printf "[%5d] done %-60s : %7.3fs : %s\n", $$, $filename, $end - $start, $count_str;
     return;
 }
 
@@ -111,22 +145,23 @@ sub run_in_parallel {
         }
     };
 
-    my $arg_no = 0;
+    my $arg_no   = 0;
+    my $last_arg = $#{ $args };
 
     srand();
 
     while ( 1 ) {
-        printf "$$ %s : Entering loop\n", ~~ localtime( time() );
         my $work_count = scalar keys %{ $K };
         my $done_count = scalar @{ $D };
         last if ( 0 == $work_count ) and ( 0 == $done_count ) and ( $arg_no == scalar @{ $args } );
-        if ( $self->{ 'jobs_limit' } > $work_count ) {
+        if (   ( $arg_no <= $last_arg )
+            && ( $self->{ 'jobs_limit' } > $work_count ) )
+        {
             my $child_pid = fork();
             if ( $child_pid ) {
 
                 # master
                 $K->{ $child_pid } = 1;
-                printf "$$ %s : worker ($child_pid) started for %s\n", ~~ localtime( time() ), $args->[ $arg_no ];
                 $arg_no++;
                 next;
             }
@@ -137,17 +172,12 @@ sub run_in_parallel {
         }
         if ( 0 < $done_count ) {
             while ( my $kid = shift @{ $D } ) {
-                printf "$$ %s : worker ($kid) ended\n", ~~ localtime( time() );
                 delete $K->{ $kid->{ 'pid' } };
             }
             next;
         }
-        printf "$$ %s : Before sleep\n", ~~ localtime( time() );
         sleep 10;    # this will be cancelled by signal, so the sleep time doesn't matter much.
-        printf "$$ %s : After sleep\n", ~~ localtime( time() );
     }
-
-    printf "%s : All done.\n", ~~ localtime( time() );
 
     $SIG{ 'CHLD' } = $previous_chld;
     return;
@@ -194,10 +224,6 @@ sub read_args {
 
     $self->show_help_and_die( 'Unknown log-type: %s', $log_type ) unless $log_type =~ m{\A(?:syslog|stderr|csvlog)\z};
 
-    if ( 'csvlog' ne $log_type ) {
-        $self->{ 'log_line_prefix_re' } = pgOtter::Log_Line_Prefix::compile_re( $prefix );
-    }
-
     # Upper limit of number of workers.
     $jobs = 1000 if 1000 < $jobs;
 
@@ -207,10 +233,11 @@ sub read_args {
     $self->show_help_and_die( 'Given output (%s) is not a directory.', $real_output_dir ) unless -d $real_output_dir;
     $self->show_help_and_die( 'Given output (%s) is not writable.',    $real_output_dir ) unless -w $real_output_dir;
 
-    $self->{ 'temp_dir' }   = tempdir( 'pgOtter.XXXXXXXXXXX', 'CLEANUP' => 1, 'TMPDIR' => 1 );
-    $self->{ 'output_dir' } = $real_output_dir;
-    $self->{ 'log_type' }   = $log_type;
-    $self->{ 'jobs_limit' } = $jobs;
+    $self->{ 'temp_dir' }        = tempdir( 'pgOtter.XXXXXXXXXXX', 'CLEANUP' => 1, 'TMPDIR' => 1 );
+    $self->{ 'output_dir' }      = $real_output_dir;
+    $self->{ 'log_type' }        = $log_type;
+    $self->{ 'log_line_prefix' } = $prefix;
+    $self->{ 'jobs_limit' }      = $jobs;
 
     $self->show_help_and_die( 'At least one log file has to be given.' ) if 0 == scalar @ARGV;
     for my $filename ( @ARGV ) {
