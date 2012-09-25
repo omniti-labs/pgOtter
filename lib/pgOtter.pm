@@ -66,7 +66,6 @@ sub run {
         'title' => 'Log parsing',
     );
 
-    # $self->run_in_parallel( sub { $self->parse_log_file( shift ) }, $self->{ 'log_files' } );
     print Dumper( $self );
     exit;
 }
@@ -126,81 +125,6 @@ sub parse_log_file {
     my $count_str   = join( ' , ', map { "$_:" . $counts{ $_ } } @sorted_keys );
     my $end         = Time::HiRes::time();
     printf "[%5d] done %-60s : %7.3fs : %s\n", $$, $filename, $end - $start, $count_str;
-    return;
-}
-
-=head3 run_in_parallel
-
-Function which runs given function, in parallel, up to given limit of jobs,
-for every element in given list.
-
-For example:
-
-    ->run_in_parallel( sub { printf "-=>[%s]\n", shift }, [ qw( a b c ) ] );
-
-Would run 3 printf, in parallel, each time with one of elements from
-arrayref being 2nd argument to run_in_parallel().
-
-=cut
-
-sub run_in_parallel {
-    my $self   = shift;
-    my $worker = shift;
-    my $args   = shift;
-
-    my $K = $self->{ 'parallel' }->{ 'kids' } = {};
-    my $D = $self->{ 'parallel' }->{ 'dead' } = [];
-
-    my $previous_chld = $SIG{ 'CHLD' };
-
-    $SIG{ 'CHLD' } = sub {
-
-        # Function taken from perldoc perlipc
-        my $child;
-        while ( ( $child = waitpid( -1, WNOHANG ) ) > 0 ) {
-            push @{ $D },
-                {
-                'pid'    => $child,
-                'status' => $CHILD_ERROR,
-                };
-        }
-    };
-
-    my $arg_no   = 0;
-    my $last_arg = $#{ $args };
-
-    srand();
-
-    while ( 1 ) {
-        my $work_count = scalar keys %{ $K };
-        my $done_count = scalar @{ $D };
-        last if ( 0 == $work_count ) and ( 0 == $done_count ) and ( $arg_no == scalar @{ $args } );
-        if (   ( $arg_no <= $last_arg )
-            && ( $self->{ 'jobs_limit' } > $work_count ) )
-        {
-            my $child_pid = fork();
-            if ( $child_pid ) {
-
-                # master
-                $K->{ $child_pid } = 1;
-                $arg_no++;
-                next;
-            }
-
-            # worker
-            $worker->( $args->[ $arg_no ] );
-            exit( 0 );
-        }
-        if ( 0 < $done_count ) {
-            while ( my $kid = shift @{ $D } ) {
-                delete $K->{ $kid->{ 'pid' } };
-            }
-            next;
-        }
-        sleep 10;    # this will be cancelled by signal, so the sleep time doesn't matter much.
-    }
-
-    $SIG{ 'CHLD' } = $previous_chld;
     return;
 }
 
