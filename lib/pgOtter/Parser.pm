@@ -8,7 +8,6 @@ use utf8;
 use open qw( :std :utf8 );
 use Carp;
 use English qw( -no_match_vars );
-use Time::Local;
 
 our $VERSION = '0.01';
 
@@ -128,8 +127,6 @@ Additionally, there are additional fields computed:
 
 =item * host - database server host name (only in syslog)
 
-=item * epoch - epoch time for log_time
-
 =item * subsecond - is the log_time/epoch withsubsecond precision (it is
 possible that the time with subsecond precision will be aaaa-bb-cc
 dd:ee:ff.000 - so checking for non-zero fraction will not work). Encoded as
@@ -164,32 +161,4 @@ sub all_lines {
     return \@reply;
 }
 
-=head3 time_to_epoch
-
-Helper function which converts given time, in "YYYY-MM-DD HH24:MI:SS" with
-optional fractional parts of second, and optional timezone, to epoch time.
-
-=cut
-
-sub time_to_epoch {
-    my $self = shift;
-    my $time = shift;
-    $time =~ /\A(?<TimeY>\d\d\d\d)-(?<TimeMo>\d\d)-(?<TimeD>\d\d) (?<TimeH>\d\d):(?<TimeMi>\d\d):(?<TimeS>\d\d\.\d+|\d\d)/;
-
-    # I can't pass TimeS to timelocal, because then it does something weird
-    # when TimeS has fractional part.
-    # Luckily, solution is simple - just pass 0 as seconds, and finally add
-    # TimeS.
-    my $epoch = $LAST_PAREN_MATCH{ 'TimeS' } + timelocal(
-        0,
-        $LAST_PAREN_MATCH{ 'TimeMi' },
-        $LAST_PAREN_MATCH{ 'TimeH' },
-        $LAST_PAREN_MATCH{ 'TimeD' },
-        $LAST_PAREN_MATCH{ 'TimeMo' } - 1,    # -1 because timelocal
-                                              # expects month 0..11, and
-                                              # not 1..12
-        $LAST_PAREN_MATCH{ 'TimeY' },
-    );
-    return $epoch;
-}
 1;

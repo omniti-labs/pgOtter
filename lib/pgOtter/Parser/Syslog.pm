@@ -69,8 +69,6 @@ sub next_line {
     $reply->{ 'error_severity' } = $level;
     $reply->{ 'message' }        = $line_data->{ $level };
 
-    $reply->{ 'epoch' } = $self->time_to_epoch( $reply->{ 'log_time' } ) if defined $reply->{ 'log_time' };
-
     my @to_delete = grep { !defined $reply->{ $_ } } keys %{ $reply };
     delete @{ $reply }{ @to_delete };
 

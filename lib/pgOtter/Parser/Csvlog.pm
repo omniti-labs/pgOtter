@@ -51,8 +51,6 @@ sub next_line {
         = @{ $fields };
     $output->{ 'subsecond' } = 1;
 
-    $output->{ 'epoch' } = $self->time_to_epoch( $output->{ 'log_time' } );
-
     return $output;
 }
 
