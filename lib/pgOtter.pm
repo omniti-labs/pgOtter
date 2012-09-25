@@ -20,6 +20,7 @@ use POSIX qw( strftime :sys_wait_h );
 use File::Temp qw( tempdir );
 use Time::HiRes;
 use pgOtter::Log_Line_Prefix;
+use pgOtter::Parallelizer;
 use IO::Uncompress::AnyUncompress qw( $AnyUncompressError );
 
 our $VERSION = '0.01';
@@ -55,7 +56,17 @@ sub run {
     my $self = shift;
     $self->read_args();
     $self->load_parser();
-    $self->run_in_parallel( sub { $self->parse_log_file( shift ) }, $self->{ 'log_files' } );
+    my $runner = pgOtter::Parallelizer->new();
+    $runner->run_in_parallel(
+        'worker'    => sub { $self->parse_log_file( shift ) },
+        'arguments' => $self->{ 'log_files' },
+        'labels'    => $self->{ 'log_files' },
+        'jobs'      => $self->{ 'jobs_limit' },
+        'progress' => $self->{ 'quiet' } ? undef : 1,
+        'title' => 'Log parsing',
+    );
+
+    # $self->run_in_parallel( sub { $self->parse_log_file( shift ) }, $self->{ 'log_files' } );
     print Dumper( $self );
     exit;
 }
@@ -92,13 +103,23 @@ sub parse_log_file {
     my $self     = shift;
     my $filename = shift;
     my $start    = Time::HiRes::time();
-    my $fh       = IO::Uncompress::AnyUncompress->new( $filename ) or croak( "anyuncompress failed: $AnyUncompressError\n" );
+
+    open my $raw_fh, '<', $filename or croak( "Cannot read from $filename: $OS_ERROR" );
+    my $previous = 0;
+
+    my $fh = IO::Uncompress::AnyUncompress->new( $raw_fh ) or croak( "anyuncompress failed: $AnyUncompressError\n" );
+
+    printf "%s\n", ( stat( $filename ) )[ 7 ];
     $self->{ 'parser' }->fh( $fh );
     my %counts = ();
     while ( my $l = $self->{ 'parser' }->next_line() ) {
         $counts{ $l->{ 'error_severity' } }++;
         $counts{ 'ALL' }++;
-        $PROGRAM_NAME = 'Parsing ' . $filename . " position: " . tell($fh);
+        my $new_pos = tell( $raw_fh );
+        if ( $new_pos != $previous ) {
+            printf "%s\n", $new_pos;
+            $previous = $new_pos;
+        }
     }
     close $fh;
     my @sorted_keys = sort keys %counts;
@@ -200,6 +221,7 @@ sub read_args {
     my $prefix   = '%t [%p]: [%l-1] ';
     my $jobs     = 1;
     my $version  = undef;
+    my $quiet    = 0;
 
     $self->show_help_and_die()
         unless GetOptions(
@@ -211,6 +233,7 @@ sub read_args {
         'log-line-prefix|p=s' => \$prefix,
         'jobs|j=i'            => \$jobs,
         'version|V'           => \$version,
+        'quiet|q'             => \$quiet,
         );
 
     if ( $help ) {
@@ -238,6 +261,7 @@ sub read_args {
     $self->{ 'log_type' }        = $log_type;
     $self->{ 'log_line_prefix' } = $prefix;
     $self->{ 'jobs_limit' }      = $jobs;
+    $self->{ 'quiet' }           = $quiet;
 
     $self->show_help_and_die( 'At least one log file has to be given.' ) if 0 == scalar @ARGV;
     for my $filename ( @ARGV ) {
