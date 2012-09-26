@@ -34,6 +34,12 @@ sub next_line {
 
     my $line_data = $self->get_line_data();
     return unless $line_data;
+
+    # Fix trailing space at the end of messages
+    for my $level ( keys %{ $line_data->{ 'all_levels' } } ) {
+        $line_data->{ $level } =~ s/\s+\z//;
+    }
+
     my $reply   = {};
     my %key_for = (
         'a'                  => 'application_name',
@@ -71,10 +77,6 @@ sub next_line {
 
     my @to_delete = grep { !defined $reply->{ $_ } } keys %{ $reply };
     delete @{ $reply }{ @to_delete };
-
-    for my $value ( values %{ $reply } ) {
-        $value =~ s/\s*\z//;
-    }
 
     return $reply;
 }
@@ -157,13 +159,15 @@ sub get_line_data {
         # if level is none of the below listed, it's something like
         # HINT/CONTEXT/STATEMENT, so we need to procedd further
         if ( $level !~ m{ \A (?: DEBUG[1-5] | INFO | NOTICE | WARNING | ERROR | LOG | FATAL | PANIC ) \z }x ) {
-            $self->{ 'data' }->{ 'current_level' } = $level;
-            $self->{ 'data' }->{ $level } = $line_data{ $level };
+            $self->{ 'data' }->{ 'current_level' }          = $level;
+            $self->{ 'data' }->{ $level }                   = $line_data{ $level };
+            $self->{ 'data' }->{ 'all_levels' }->{ $level } = 1;
             next;
         }
 
-        $line_data{ 'base_level' } = $level;
-        $line_data{ 'host' }       = $syslog->{ 'Host' };
+        $line_data{ 'all_levels' }->{ $level } = 1;
+        $line_data{ 'base_level' }             = $level;
+        $line_data{ 'host' }                   = $syslog->{ 'Host' };
         $line_data{ 'p' } //= $syslog->{ 'PID' };
         if (   ( !defined $line_data{ 'm' } )
             && ( !defined $line_data{ 't' } ) )
