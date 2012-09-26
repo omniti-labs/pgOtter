@@ -3,6 +3,7 @@ doc/pgOtter.pod
 etsy.config
 lib/pgOtter.pm
 lib/pgOtter/Log_Line_Prefix.pm
+lib/pgOtter/Parallelizer.pm
 lib/pgOtter/Parser.pm
 lib/pgOtter/Parser/Csvlog.pm
 lib/pgOtter/Parser/Stderr.pm
@@ -21,6 +22,7 @@ t/05-perltidy.t
 t/06-parse-csvlog.t
 t/07-parse-stderr.t
 t/08-parse-syslog.t
+t/09-parsing-stderr-bad-case-001.t
 t/logs/test.csvlog.log
 t/logs/test.stderr.log
 t/logs/test.syslog.log

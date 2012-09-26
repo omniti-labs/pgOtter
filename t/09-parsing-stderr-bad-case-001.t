@@ -38,7 +38,6 @@ sub expected {
         {
             'connection_from'  => '',
             'database_name'    => '[unknown]',
-            'epoch'            => '1347282903.572',
             'error_severity'   => 'LOG',
             'log_time'         => '2012-09-10 15:15:03.572 UTC',
             'message'          => 'connection received: host=10.101.138.51 port=51608',

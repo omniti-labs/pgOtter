@@ -47,7 +47,6 @@ sub expected {
             'context'          => 'SQL statement "SELECT b()"
 	PL/pgSQL function a() line 1 at PERFORM',
             'database_name'          => 'depesz',
-            'epoch'                  => '1347566011.852',
             'error_severity'         => 'LOG',
             'host'                   => 'h3po4',
             'log_time'               => '2012-09-13 21:53:31.852 CEST',
@@ -68,7 +67,6 @@ sub expected {
             'command_tag'            => 'SELECT',
             'connection_from'        => '[local]',
             'database_name'          => 'depesz',
-            'epoch'                  => '1347566011.852',
             'error_severity'         => 'LOG',
             'host'                   => 'h3po4',
             'log_time'               => '2012-09-13 21:53:31.852 CEST',

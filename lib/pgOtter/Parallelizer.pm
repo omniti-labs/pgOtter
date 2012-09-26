@@ -260,9 +260,9 @@ sub prepare_env {
     return;
 }
 
-=head3
+=head3 cleanup
 
-leans various internal state variables after job is done.
+Cleans various internal state variables after job is done.
 
 =cut
 
