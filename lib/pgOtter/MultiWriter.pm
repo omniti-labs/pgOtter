@@ -127,7 +127,7 @@ sub get_fh_for {
         if ( 100 < scalar @{ $self->{ 'fh_queue' } } ) {
             my $fn_to_close = shift @{ $self->{ 'fh_queue' } };
             my $close_fh    = delete $self->{ 'fhs' }->{ $filename };
-            close $close_fh;
+            close $close_fh if defined $close_fh;
         }
         open my $fh, '>>', $filename or croak( "Cannot write to $filename: $OS_ERROR\n" );
         push @{ $self->{ 'fh_queue' } }, $filename;

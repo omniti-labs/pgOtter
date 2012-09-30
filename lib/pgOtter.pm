@@ -168,6 +168,7 @@ sub read_args {
     }
 
     $self->show_help_and_die( 'Unknown log-type: %s', $log_type ) unless $log_type =~ m{\A(?:syslog|stderr|csvlog)\z};
+    $self->show_help_and_die( 'For stderr logs, log_line_prefix has to contain %p or %c.' ) if $log_type eq 'stderr' && $prefix !~ /%[pc]/;
 
     # Upper limit of number of workers.
     $jobs = 1000 if 1000 < $jobs;
@@ -178,7 +179,7 @@ sub read_args {
     $self->show_help_and_die( 'Given output (%s) is not a directory.', $real_output_dir ) unless -d $real_output_dir;
     $self->show_help_and_die( 'Given output (%s) is not writable.',    $real_output_dir ) unless -w $real_output_dir;
 
-    $self->{ 'temp_dir' }        = tempdir( 'pgOtter.XXXXXXXXXXX', 'CLEANUP' => 1, 'TMPDIR' => 1 );
+    $self->{ 'temp_dir' }        = tempdir( 'pgOtter.XXXXXXXXXXX', 'CLEANUP' => 0, 'TMPDIR' => 1 );
     $self->{ 'output_dir' }      = $real_output_dir;
     $self->{ 'log_type' }        = $log_type;
     $self->{ 'log_line_prefix' } = $prefix;
