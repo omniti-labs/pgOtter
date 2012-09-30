@@ -196,7 +196,17 @@ sub update_progress_info {
 
 =head3 start_worker_for()
 
-Starts single worker process for given arg_no
+Starts single worker process for given arg_no.
+
+Worker function is called with two arguments:
+
+=over
+
+=item * index of argument (integer starting with 0, going up)
+
+=item * actual argument
+
+=back
 
 =cut
 
@@ -224,7 +234,7 @@ sub start_worker_for {
     }
 
     # worker
-    $self->{ 'A' }->{ 'worker' }->( $self->{ 'A' }->{ 'arguments' }->[ $arg_no ] );
+    $self->{ 'A' }->{ 'worker' }->( $arg_no, $self->{ 'A' }->{ 'arguments' }->[ $arg_no ] );
     exit( 0 );
 }
 

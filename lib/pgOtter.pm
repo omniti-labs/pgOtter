@@ -20,6 +20,7 @@ use POSIX qw( strftime :sys_wait_h );
 use File::Temp qw( tempdir );
 use Time::HiRes;
 use pgOtter::Log_Line_Prefix;
+use pgOtter::Stage1;
 use pgOtter::Parallelizer;
 use IO::Uncompress::AnyUncompress qw( $AnyUncompressError );
 
@@ -58,7 +59,7 @@ sub run {
     $self->load_parser();
     my $runner = pgOtter::Parallelizer->new();
     $runner->run_in_parallel(
-        'worker'    => sub { $self->parse_log_file( shift ) },
+        'worker'    => sub { $self->parse_log_file( @_ ) },
         'arguments' => $self->{ 'log_files' },
         'labels'    => $self->{ 'log_files' },
         'jobs'      => $self->{ 'jobs_limit' },
@@ -100,8 +101,8 @@ Handles initial parsing of single log file.
 
 sub parse_log_file {
     my $self     = shift;
+    my $arg_no   = shift;
     my $filename = shift;
-    my $start    = Time::HiRes::time();
 
     open my $raw_fh, '<', $filename or croak( "Cannot read from $filename: $OS_ERROR" );
     my $previous = 0;
@@ -109,22 +110,19 @@ sub parse_log_file {
     my $fh = IO::Uncompress::AnyUncompress->new( $raw_fh ) or croak( "anyuncompress failed: $AnyUncompressError\n" );
 
     printf "%s\n", ( stat( $filename ) )[ 7 ];
+
     $self->{ 'parser' }->fh( $fh );
-    my %counts = ();
-    while ( my $l = $self->{ 'parser' }->next_line() ) {
-        $counts{ $l->{ 'error_severity' } }++;
-        $counts{ 'ALL' }++;
+
+    my $stage1 = pgOtter::Stage1->new( $arg_no, $self->{ 'temp_dir' } );
+
+    while ( my $line = $self->{ 'parser' }->next_line() ) {
         my $new_pos = tell( $raw_fh );
-        if ( $new_pos != $previous ) {
-            printf "%s\n", $new_pos;
-            $previous = $new_pos;
-        }
+        printf "%s\n", $new_pos if $new_pos != $previous;
+        $previous = $new_pos;
+        $stage1->handle_line( $line );
     }
     close $fh;
-    my @sorted_keys = sort keys %counts;
-    my $count_str   = join( ' , ', map { "$_:" . $counts{ $_ } } @sorted_keys );
-    my $end         = Time::HiRes::time();
-    printf "[%5d] done %-60s : %7.3fs : %s\n", $$, $filename, $end - $start, $count_str;
+
     return;
 }
 
